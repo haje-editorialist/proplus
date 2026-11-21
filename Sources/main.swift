@@ -106,9 +106,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func evaluate() {
         let closed = lidClosed()
         // Lid just closed while we're keeping the Mac awake: it won't sleep, so lock it ourselves.
-        if closed && !lidWasClosed && lockOnLidClose && sleepDisabled() && !externalDisplayAttached() {
-            lockScreen()
-        }
+        var shouldLock = closed && !lidWasClosed && sleepDisabled()
         lidWasClosed = closed
 
         if !closed {
@@ -123,7 +121,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             // Sleep was just re-enabled: if the lid is already shut, make sure the Mac
             // actually goes to sleep instead of staying awake in a bag.
             if !needsSetup && !want { sleepIfLidClosed() }
+            // Started staying awake with the lid already shut (e.g. plugged in while closed).
+            if !needsSetup && want && closed { shouldLock = true }
         }
+        if shouldLock && lockOnLidClose && !externalDisplayAttached() { lockScreen() }
         updateIcon()
     }
 

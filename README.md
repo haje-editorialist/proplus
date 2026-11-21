@@ -19,7 +19,13 @@ On battery, normal lid-close sleep is always restored. Quitting ProPlus restores
 - **Lock when lid closes**: because the Mac doesn't sleep, it wouldn't lock either. ProPlus locks the screen the moment you close the lid while it's keeping the Mac awake. Untick **Lock When Lid Closes** in the menu to turn this off. (Uses the same unofficial system call as the Lock Screen menu item, since macOS has no public one.)
 - **Laptop Temperature**: the menu shows the laptop temperature level (Normal, Warm, Hot, Very hot), from macOS's own thermal rating. If it reaches Hot with the lid shut, ProPlus lets the Mac sleep and the icon turns into a thermometer. It stays that way until you open the lid.
 - **Lid already shut when sleep comes back** (e.g. you unplug with the lid closed): ProPlus puts the Mac to sleep right away, unless an external display is keeping it in clamshell mode.
-- **Watchdog**: a LaunchAgent (`local.haje.proplus.watchdog`, installed by `build.sh`) runs every 30 seconds and at login. If ProPlus has crashed or been force-quit while sleep is off, or the Mac is on battery, it turns sleep back on, and sleeps the Mac if the lid is shut on battery.
+- **Watchdog**: a LaunchAgent (`local.haje.proplus.watchdog`, installed by `build.sh`) runs every 30 seconds and at login. If sleep is off and ProPlus has crashed or been force-quit, or the Mac is on battery, it turns sleep back on, and sleeps the Mac if the lid is shut on battery.
+
+## Known limits
+
+- The sleep-off setting is saved by macOS and survives a restart. A normal restart or shutdown quits ProPlus, which turns sleep back on. After a hard power-off or a system crash, sleep stays off until you log in again (the watchdog then fixes it within seconds).
+- ProPlus owns the `disablesleep` setting: it will switch it back if another tool changes it.
+- An external or virtual display (AirPlay, Sidecar) counts as "using the Mac with the lid shut", so ProPlus won't lock, force sleep or apply the overheat check while one is connected.
 
 ## Install
 

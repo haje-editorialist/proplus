@@ -3,7 +3,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-VERSION="1.3.0"
+VERSION="1.3.1"
 APP="build/ProPlus.app"
 
 rm -rf build
@@ -33,7 +33,8 @@ codesign --force --sign - "$APP"
 
 mkdir -p ~/Applications
 pkill -x ProPlus 2>/dev/null || true
-while pgrep -xq ProPlus; do sleep 0.2; done   # let it finish quitting before relaunching
+for _ in {1..25}; do pgrep -xq ProPlus || break; sleep 0.2; done   # let it finish quitting
+pkill -9 -x ProPlus 2>/dev/null || true                             # ...or make it
 rm -rf ~/Applications/ProPlus.app
 cp -R "$APP" ~/Applications/
 
