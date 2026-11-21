@@ -3,6 +3,7 @@
 // On battery, normal lid-close sleep is always restored.
 
 import Cocoa
+import IOKit
 import IOKit.ps
 import ServiceManagement
 
@@ -88,14 +89,45 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let want = shouldStayAwake()
         if want != lastApplied {
             if applyPmset(disable: want) {
+                let wasAwake = lastApplied == true
                 lastApplied = want
                 setupError = nil
+                if wasAwake && !want { sleepIfLidClosed() }
             } else {
                 setupError = "Setup needed: run setup.sh once"
                 lastApplied = currentSleepDisabled()
             }
         }
         updateIcon()
+    }
+
+    // MARK: - Lid
+
+    private func lidClosed() -> Bool {
+        let svc = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("IOPMrootDomain"))
+        guard svc != 0 else { return false }
+        defer { IOObjectRelease(svc) }
+        let v = IORegistryEntryCreateCFProperty(svc, "AppleClamshellState" as CFString, kCFAllocatorDefault, 0)?
+            .takeRetainedValue() as? Bool
+        return v ?? false
+    }
+
+    private func externalDisplayAttached() -> Bool {
+        var count: UInt32 = 0
+        guard CGGetOnlineDisplayList(0, nil, &count) == .success, count > 0 else { return false }
+        var ids = [CGDirectDisplayID](repeating: 0, count: Int(count))
+        guard CGGetOnlineDisplayList(count, &ids, &count) == .success else { return false }
+        return ids.prefix(Int(count)).contains { CGDisplayIsBuiltin($0) == 0 }
+    }
+
+    /// Sleep was just re-enabled. If the lid is already shut (and there's no external
+    /// display keeping the Mac in clamshell mode), make sure it actually goes to sleep
+    /// instead of staying awake in a bag.
+    private func sleepIfLidClosed() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5) { [weak self] in
+            guard let self, self.lastApplied == false, self.lidClosed(), !self.externalDisplayAttached() else { return }
+            _ = self.run(pmsetPath, ["sleepnow"])
+        }
     }
 
     // MARK: - pmset
