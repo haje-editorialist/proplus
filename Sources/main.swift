@@ -214,7 +214,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         login.target = self
         login.state = SMAppService.mainApp.status == .enabled ? .on : .off
         menu.addItem(login)
-        menu.addItem(disabled("ProPlus \(appVersion)"))
+        let about = NSMenuItem(title: "About ProPlus (\(appVersion))", action: #selector(openAbout), keyEquivalent: "")
+        about.target = self
+        menu.addItem(about)
         let quit = NSMenuItem(title: "Quit ProPlus", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         menu.addItem(quit)
     }
@@ -227,6 +229,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     @objc private func pick(_ sender: NSMenuItem) {
         if let raw = sender.representedObject as? String, let m = Mode(rawValue: raw) { mode = m }
+    }
+
+    @objc private func openAbout() {
+        NSWorkspace.shared.open(URL(string: "https://github.com/haje-editorialist/proplus")!)
     }
 
     @objc private func toggleLogin() {
