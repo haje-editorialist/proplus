@@ -3,7 +3,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-VERSION="1.1.2"
+VERSION="1.1.3"
 APP="build/ProPlus.app"
 
 rm -rf build

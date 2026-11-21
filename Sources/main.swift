@@ -196,7 +196,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let awake = lastApplied == true
         let power = onACPower() ? "Plugged in" : "On battery"
         let claude = claudeOpen() ? "Claude open" : "Claude closed"
-        menu.addItem(disabled(awake ? "Awake with lid closed" : "Normal sleep"))
+        let status: String
+        if lidClosed() {
+            status = awake ? "Lid closed, staying awake" : "Lid closed, sleep allowed"
+        } else {
+            status = awake ? "Will stay awake when the lid closes" : "Will sleep when the lid closes"
+        }
+        menu.addItem(disabled(status))
         menu.addItem(disabled("\(power) · \(claude)"))
         menu.addItem(disabled("Laptop Temperature: \(heatLabel)"))
         if overheating() { menu.addItem(disabled("Too hot with lid closed, letting it sleep")) }
