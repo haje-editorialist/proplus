@@ -29,6 +29,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var needsSetup = false
     /// Set when the Mac gets hot with the lid shut; cleared when the lid opens.
     private var overheated = false
+    private var lidWasClosed = false
+
+    private var lockOnLidClose: Bool {
+        get { UserDefaults.standard.object(forKey: "lockOnLidClose") as? Bool ?? true }
+        set { UserDefaults.standard.set(newValue, forKey: "lockOnLidClose") }
+    }
 
     private var mode: Mode {
         get { Mode(rawValue: UserDefaults.standard.string(forKey: "mode") ?? "") ?? .auto }
@@ -49,6 +55,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }, ctx)?.takeRetainedValue() {
             CFRunLoopAddSource(CFRunLoopGetMain(), src, .defaultMode)
         }
+        // The lid opening or closing arrives as a power management message.
+        let root = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("IOPMrootDomain"))
+        if root != 0, let port = IONotificationPortCreate(kIOMainPortDefault) {
+            IONotificationPortSetDispatchQueue(port, .main)
+            var notifier: io_object_t = 0
+            IOServiceAddInterestNotification(port, root, kIOGeneralInterest, { ctx, _, _, _ in
+                guard let ctx else { return }
+                let me = Unmanaged<AppDelegate>.fromOpaque(ctx).takeUnretainedValue()
+                // Give the lid state a moment to settle before reading it.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { me.evaluate() }
+            }, ctx, &notifier)
+        }
         let refresh: (Notification) -> Void = { [weak self] _ in self?.evaluate() }
         let workspace = NSWorkspace.shared.notificationCenter
         for name in [NSWorkspace.didLaunchApplicationNotification,
@@ -58,7 +76,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         NotificationCenter.default.addObserver(forName: ProcessInfo.thermalStateDidChangeNotification,
                                                object: nil, queue: .main, using: refresh)
-        // Fallback poll (also catches the lid closing, which has no notification).
+        // Fallback poll.
         Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in self?.evaluate() }
 
         // Treat `kill` like Quit, so sleep is restored on the way out.
@@ -86,7 +104,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private func evaluate() {
-        if !lidClosed() {
+        let closed = lidClosed()
+        // Lid just closed while we're keeping the Mac awake: it won't sleep, so lock it ourselves.
+        if closed && !lidWasClosed && lockOnLidClose && sleepDisabled() && !externalDisplayAttached() {
+            lockScreen()
+        }
+        lidWasClosed = closed
+
+        if !closed {
             overheated = false
         } else if isHot && !externalDisplayAttached() {
             overheated = true
@@ -107,6 +132,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             guard let self, !self.sleepDisabled(), self.lidClosed(), !self.externalDisplayAttached() else { return }
             self.run(pmset, "sleepnow")
         }
+    }
+
+    /// macOS has no public API for locking the screen; this is the call the system's own
+    /// Lock Screen menu item uses. If it ever disappears, this quietly does nothing.
+    private func lockScreen() {
+        guard let lib = dlopen("/System/Library/PrivateFrameworks/login.framework/login", RTLD_NOW),
+              let sym = dlsym(lib, "SACLockScreenImmediate") else { return }
+        typealias LockFn = @convention(c) () -> Int32
+        _ = unsafeBitCast(sym, to: LockFn.self)()
     }
 
     // MARK: - System state
@@ -207,6 +241,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
 
         menu.addItem(.separator())
+        let lock = action("Lock When Lid Closes", #selector(toggleLock))
+        lock.state = lockOnLidClose ? .on : .off
+        menu.addItem(lock)
         let login = action("Open at Login", #selector(toggleLogin))
         login.state = SMAppService.mainApp.status == .enabled ? .on : .off
         menu.addItem(login)
@@ -228,6 +265,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     @objc private func pick(_ sender: NSMenuItem) {
         if let m = sender.representedObject as? Mode { mode = m }
+    }
+
+    @objc private func toggleLock() {
+        lockOnLidClose.toggle()
     }
 
     @objc private func openAbout() {
