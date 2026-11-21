@@ -2,6 +2,8 @@
 
 A small macOS menu bar app that keeps a MacBook awake with the lid closed when it's plugged in to power and Claude is running, so Claude tasks keep going while the laptop is put away.
 
+**Why "ProPlus"?** It's named after Pro Plus, the caffeine tablets that kept me going through my university days. This app does the same job for the laptop.
+
 ## Modes
 
 Pick a mode from the menu bar icon (☕ = stays awake with lid closed, 🌙 = normal sleep):
