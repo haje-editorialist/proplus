@@ -29,11 +29,17 @@ Needs macOS 13 or later and the Xcode command line tools (`xcode-select --instal
 ./setup.sh   # one time, asks for your admin password
 ```
 
-`setup.sh` adds `/etc/sudoers.d/proplus`, which lets ProPlus run only `pmset -a disablesleep 0` and `pmset -a disablesleep 1` without a password. It writes and validates the rule in a root-owned staging file before moving it into place. Undo with `sudo rm /etc/sudoers.d/proplus`.
-
-To remove the watchdog: `launchctl bootout gui/$(id -u)/local.haje.proplus.watchdog && rm ~/Library/LaunchAgents/local.haje.proplus.watchdog.plist`.
+`setup.sh` adds `/etc/sudoers.d/proplus`, which lets ProPlus run only `pmset -a disablesleep 0` and `pmset -a disablesleep 1` without a password. It writes and validates the rule in a root-owned staging file before moving it into place.
 
 Tick **Open at Login** in the menu to start it automatically.
+
+## Uninstall
+
+```bash
+./uninstall.sh   # asks for your admin password
+```
+
+Removes the app, the watchdog, the saved mode and the `/etc/sudoers.d/proplus` rule, and puts lid-close sleep back to normal.
 
 ## Changing it
 
