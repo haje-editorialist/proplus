@@ -16,6 +16,7 @@ On battery, normal lid-close sleep is always restored. Quitting ProPlus restores
 
 ## Safety nets
 
+- **Heat**: the menu shows the Mac's heat level (Normal, Warm, Hot, Very hot), from macOS's own thermal rating. If it reaches Hot with the lid shut, ProPlus lets the Mac sleep and the icon turns into a thermometer. It goes back to normal when you open the lid.
 - **Lid already shut when sleep comes back** (e.g. you unplug with the lid closed): ProPlus puts the Mac to sleep right away, unless an external display is keeping it in clamshell mode.
 - **Watchdog**: a LaunchAgent (`local.haje.proplus.watchdog`, installed by `build.sh`) runs every 30 seconds and at login. If ProPlus has crashed or been force-quit while sleep is off, or the Mac is on battery, it turns sleep back on, and sleeps the Mac if the lid is shut on battery.
 

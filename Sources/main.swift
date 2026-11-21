@@ -53,6 +53,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         for name in [NSWorkspace.didLaunchApplicationNotification, NSWorkspace.didTerminateApplicationNotification] {
             nc.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in self?.evaluate() }
         }
+        NotificationCenter.default.addObserver(forName: ProcessInfo.thermalStateDidChangeNotification,
+                                               object: nil, queue: .main) { [weak self] _ in self?.evaluate() }
         // Fallback poll.
         timer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in self?.evaluate() }
 
@@ -76,8 +78,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         !NSRunningApplication.runningApplications(withBundleIdentifier: claudeBundleID).isEmpty
     }
 
+    private var heat: ProcessInfo.ThermalState { ProcessInfo.processInfo.thermalState }
+
+    private var heatLabel: String {
+        switch heat {
+        case .nominal: return "Normal"
+        case .fair: return "Warm"
+        case .serious: return "Hot"
+        case .critical: return "Very hot"
+        @unknown default: return "Unknown"
+        }
+    }
+
+    /// Too hot to keep running with the lid shut (and no external display).
+    private func overheating() -> Bool {
+        heat.rawValue >= ProcessInfo.ThermalState.serious.rawValue && lidClosed() && !externalDisplayAttached()
+    }
+
     private func shouldStayAwake() -> Bool {
         guard onACPower() else { return false }
+        if overheating() { return false }
         switch mode {
         case .on: return true
         case .auto: return claudeOpen()
@@ -162,7 +182,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func updateIcon() {
         let awake = lastApplied == true
-        let symbol = setupError != nil ? "exclamationmark.triangle" : (awake ? "cup.and.saucer.fill" : "moon.zzz")
+        let symbol = setupError != nil ? "exclamationmark.triangle"
+            : overheating() ? "thermometer.high"
+            : (awake ? "cup.and.saucer.fill" : "moon.zzz")
         let img = NSImage(systemSymbolName: symbol, accessibilityDescription: "ProPlus")
         img?.isTemplate = true
         statusItem.button?.image = img
@@ -176,6 +198,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let claude = claudeOpen() ? "Claude open" : "Claude closed"
         menu.addItem(disabled(awake ? "Awake with lid closed" : "Normal sleep"))
         menu.addItem(disabled("\(power) · \(claude)"))
+        menu.addItem(disabled("Heat: \(heatLabel)"))
+        if overheating() { menu.addItem(disabled("Too hot with lid closed, letting it sleep")) }
         if let setupError { menu.addItem(disabled(setupError)) }
         menu.addItem(.separator())
         for m in Mode.allCases {
