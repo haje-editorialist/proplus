@@ -198,7 +198,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let claude = claudeOpen() ? "Claude open" : "Claude closed"
         menu.addItem(disabled(awake ? "Awake with lid closed" : "Normal sleep"))
         menu.addItem(disabled("\(power) · \(claude)"))
-        menu.addItem(disabled("Heat: \(heatLabel)"))
+        menu.addItem(disabled("Laptop Temperature: \(heatLabel)"))
         if overheating() { menu.addItem(disabled("Too hot with lid closed, letting it sleep")) }
         if let setupError { menu.addItem(disabled(setupError)) }
         menu.addItem(.separator())
