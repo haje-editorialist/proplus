@@ -16,14 +16,16 @@ On battery, normal lid-close sleep is always restored. Quitting ProPlus restores
 
 ## Safety nets
 
-- **Laptop Temperature**: the menu shows the laptop temperature level (Normal, Warm, Hot, Very hot), from macOS's own thermal rating. If it reaches Hot with the lid shut, ProPlus lets the Mac sleep and the icon turns into a thermometer. It goes back to normal when you open the lid.
+- **Laptop Temperature**: the menu shows the laptop temperature level (Normal, Warm, Hot, Very hot), from macOS's own thermal rating. If it reaches Hot with the lid shut, ProPlus lets the Mac sleep and the icon turns into a thermometer. It stays that way until you open the lid.
 - **Lid already shut when sleep comes back** (e.g. you unplug with the lid closed): ProPlus puts the Mac to sleep right away, unless an external display is keeping it in clamshell mode.
 - **Watchdog**: a LaunchAgent (`local.haje.proplus.watchdog`, installed by `build.sh`) runs every 30 seconds and at login. If ProPlus has crashed or been force-quit while sleep is off, or the Mac is on battery, it turns sleep back on, and sleeps the Mac if the lid is shut on battery.
 
 ## Install
 
+Needs macOS 13 or later and the Xcode command line tools (`xcode-select --install`).
+
 ```bash
-./build.sh   # compiles and installs to ~/Applications/ProPlus.app
+./build.sh   # compiles, installs to ~/Applications/ProPlus.app, loads the watchdog
 ./setup.sh   # one time, asks for your admin password
 ```
 
